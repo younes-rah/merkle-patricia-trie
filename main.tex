@@ -23,28 +23,30 @@ Per operation:
 More data means mode nodes accessed per operations with lead to:
 ${L_h \approx k .\log_{16} (D_h)}$ (assuming MPT is balanced)
 
-${k}$: Constant that depends on trie implementation and keys distribution
+${k}$: Constant
 
 Which lead to:
 
 \centering\boxed{T_h = n.k.\log_{16}(D_h) . (R + W)}
 
 \begin{itemize}
-    \item The processing time for the block ${h}$: ${T_h = n.k.\log_{16}(D_h) + (R + W)}$
+    \item The processing time for the block ${h}$: ${T_h = n.k.\log_{16}(D_h) . (R + W)}$
 
-    \item The processing time for the previous block 
+    \item The processing time for the previous block (h-1):
+
+
+          ${T_{h-1} = n.k.\log_{16}(D_{h-1}) . (R + W)}$
+
+    \item Relation between $T_h$ and $T_{h-1}$:
+
+          $\dfrac{T_h}{T_{h-1}} = \dfrac{n.k.\log_{16}(D_h) . (R + W)}{n.k.\log_{16}(D_{h-1}) . (R + W)}$
+
+          $\Rightarrow \dfrac{T_h}{T_{h-1}} = \dfrac{\log_{16}(D_h) }{\log_{16}(D_{h-1}) }$
+
+          \centering\boxed{${T_h} = \dfrac{\log_{16}(D_h) }{\log_{16}(D_{h-1}) }{.{T_{h-1}}$}}
+
+
 \end{itemize}
-
-${h}$: ${T_h = n.k.\log_{16}(D_h) . (R + W)}$
-
-$\Rightarrow \dfrac{T_h}{T_h-1} = \dfrac{n.k.\log_{16}(D_h) . (R + W)}{n.k.\log_{16}(D_h-1) . (R + W)}$
-
-$\Rightarrow \dfrac{T_h}{T_h-1} = \dfrac{\log_{16}(D_h) }{\log_{16}(D_h-1) }$
-
-$\Rightarrow {T_h} = \dfrac{\log_{16}(D_h) }{\log_{16}(D_h-1) }{.{T_h-1}}$
-
-
-
 
 
 \end{document}
