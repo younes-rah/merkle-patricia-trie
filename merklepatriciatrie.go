@@ -293,10 +293,23 @@ func (t *MPT) Commit() []byte {
 	if t.root == nil {
 		return nil
 	}
-	rootHash := t.hashNode(t.root)
-	t.storage.Put(rootHash, rootHash)
 
-	return rootHash
+	// Serialize the root node
+	serializedRoot, err := t.serializeNode(t.root)
+	if err != nil {
+		return nil
+	}
+
+	// Calculate the root hash
+	rootHash := sha256.Sum256(serializedRoot)
+
+	// Store the serialized root node under the root hash
+	err = t.storage.Put(rootHash[:], serializedRoot)
+	if err != nil {
+		return nil
+	}
+
+	return rootHash[:]
 }
 
 func (t *MPT) hashNode(node *Node) []byte {
@@ -329,6 +342,87 @@ func (t *MPT) hashNode(node *Node) []byte {
 
 func hashToSlice(hash [32]byte) []byte {
 	return hash[:]
+}
+
+func (t *MPT) serializeNode(node *Node) ([]byte, error) {
+	if node == nil {
+		return nil, nil
+	}
+
+	var buf bytes.Buffer
+	switch node.Type {
+	case BranchNode:
+		buf.WriteByte(byte(BranchNode))
+		for i := 0; i < 16; i++ {
+			childHash := t.hashNode(node.Children[i])
+			buf.Write(childHash)
+		}
+		buf.Write(node.Value)
+	case ExtensionNode:
+		buf.WriteByte(byte(ExtensionNode))
+		buf.Write(node.Key)
+		nextHash := t.hashNode(node.Next)
+		buf.Write(nextHash)
+	case LeafNode:
+		buf.WriteByte(byte(LeafNode))
+		buf.Write(node.Key)
+		buf.Write(node.Value)
+	default:
+		return nil, errors.New("unknown node type")
+	}
+
+	return buf.Bytes(), nil
+}
+
+func (t *MPT) deserializeNode(data []byte) (*Node, error) {
+	if len(data) == 0 {
+		return nil, nil
+	}
+
+	nodeType := NodeType(data[0])
+	switch nodeType {
+	case BranchNode:
+		node := &Node{Type: BranchNode}
+		offset := 1
+		for i := 0; i < 16; i++ {
+			childHash := data[offset : offset+32]
+			offset += 32
+			if !bytes.Equal(childHash, make([]byte, 32)) {
+				childNode, err := t.getNodeByHash(childHash)
+				if err != nil {
+					return nil, err
+				}
+				node.Children[i] = childNode
+			}
+		}
+		node.Value = data[offset:]
+		return node, nil
+	case ExtensionNode:
+		node := &Node{Type: ExtensionNode}
+		node.Key = data[1:33]
+		nextHash := data[33:65]
+		nextNode, err := t.getNodeByHash(nextHash)
+		if err != nil {
+			return nil, err
+		}
+		node.Next = nextNode
+		return node, nil
+	case LeafNode:
+		node := &Node{Type: LeafNode}
+		node.Key = data[1:33]
+		node.Value = data[33:]
+		return node, nil
+	default:
+		return nil, errors.New("unknown node type")
+	}
+}
+
+func (t *MPT) getNodeByHash(hash []byte) (*Node, error) {
+	data, err := t.storage.Get(hash)
+	if err != nil {
+		return nil, err
+	}
+	return t.deserializeNode(data)
 }
 
 func (t *MPT) Proof(key []byte) ([][]byte, error) {
