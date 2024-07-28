@@ -1,6 +1,8 @@
 package merklepatriciatrie
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 )
 
@@ -23,15 +25,18 @@ type Node struct {
 	isLeaf   bool
 	value    []byte
 	children map[byte]*Node
+	hash     []byte
 }
 
 type MPT struct {
-	root *Node
+	root    *Node
+	storage map[string][]byte
 }
 
 func NewMPT() *MPT {
 	return &MPT{
-		root: &Node{children: make(map[byte]*Node)},
+		root:    &Node{children: make(map[byte]*Node)},
+		storage: make(map[string][]byte),
 	}
 }
 
@@ -127,4 +132,39 @@ func (t *MPT) Del(key []byte) error {
 	// finnish with no error
 	return nil
 
+}
+
+func (t *MPT) commitNode(node *Node) []byte {
+	if node == nil {
+		return nil
+	}
+
+	// Create hash
+	nodeHash := sha256.New()
+
+	// ensure current node is a leaf
+	if node.isLeaf {
+		nodeHash.Write(node.value)
+	}
+
+	// Append all childre hashes
+	for char, child := range node.children {
+		// We treat children recursively
+		childHash := t.commitNode(child)
+		nodeHash.Write([]byte{char})
+		nodeHash.Write(childHash)
+
+	}
+
+	// Produce final hash
+	node.hash = nodeHash.Sum(nil)
+	t.storage[hex.EncodeToString(node.hash)] = node.value
+
+	return node.hash
+
+}
+
+func (t *MPT) Commit() []byte {
+	t.commitNode(t.root)
+	return t.root.hash
 }

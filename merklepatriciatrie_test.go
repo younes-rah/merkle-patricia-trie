@@ -95,3 +95,13 @@ func TestDeleteMultipleLevelsNode(t *testing.T) {
 	}
 
 }
+
+func TestCommit(t *testing.T) {
+	mpt := NewMPT()
+	mpt.Put([]byte("key1"), []byte("value1"))
+	mpt.Put([]byte("key2"), []byte("value2"))
+	rootHash := mpt.Commit()
+	if len(rootHash) == 0 {
+		t.Fatalf("expected a valid root hash, got empty hash")
+	}
+}
