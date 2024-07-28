@@ -52,6 +52,8 @@ func NewMPT() *MPT {
 	}
 }
 
+var _ iTrie = (*MPT)(nil) // Ensures MPT implements iTrie
+
 func (t *MPT) Get(key []byte) ([]byte, error) {
 	currentNode := t.root
 
