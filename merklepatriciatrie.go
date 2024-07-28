@@ -7,14 +7,16 @@ import (
 )
 
 type iTrie interface {
-	// Get returns the value associate with the key // error is returned if the key is not found.
+	// Get returns the value associate with the key
+	// error is returned if the key is not found.
 	Get(key []byte) ([]byte, error)
 	// Put inserts the [key,value] node in the trie
 	Put(key []byte, value []byte)
 	// Del removes a node from the trie
 	// returns an error if not found.
 	Del(key []byte) error
-	// Commit saves the trie in persistent storage // and returns the trie root key.
+	// Commit saves the trie in persistent storage
+	// and returns the trie root key.
 	Commit() []byte
 	// Proof returns the Merkle-proof associated with
 	// a node. An error is returned if the node is not found.
