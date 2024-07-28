@@ -8,7 +8,7 @@ import (
 )
 
 func TestPutAndGet(t *testing.T) {
-	trie := NewTrie()
+	trie := NewMPT()
 
 	// Test Put and Get
 	trie.Put([]byte("key1"), []byte("value1"))
@@ -24,7 +24,7 @@ func TestPutAndGet(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	trie := NewTrie()
+	trie := NewMPT()
 
 	// Put a key-value pair
 	trie.Put([]byte("key1"), []byte("value1"))
@@ -37,7 +37,7 @@ func TestDelete(t *testing.T) {
 }
 
 func TestCommit(t *testing.T) {
-	trie := NewTrie()
+	trie := NewMPT()
 
 	// Put a key-value pair
 	trie.Put([]byte("key1"), []byte("value1"))
@@ -52,16 +52,32 @@ func TestCommit(t *testing.T) {
 	assert.Equal(t, rootKey, storedRootKey)
 }
 
-func TestProof(t *testing.T) {
-	trie := NewTrie()
+func TestProofSize(t *testing.T) {
+	trie := NewMPT()
 
-	// Test Proof (not implemented)
-	_, err := trie.Proof([]byte("key2"))
-	assert.Error(t, err)
+	// Populate the trie with two key-value pairs
+	keys := []string{"key1", "key2"}
+	values := []string{"value1", "value2"}
+
+	for i := range keys {
+		trie.Put(keyToNibbles([]byte(keys[i])), []byte(values[i]))
+	}
+
+	// Generate proofs for the keys
+	proof, err := trie.Proof(keyToNibbles([]byte("key1")))
+	assert.NoError(t, err)
+	assert.NotEmpty(t, proof)
+
+	// Verify the size of the proof
+	// Should be 3 because in this setup we expect:
+	// 1 ExtensionNode since key1 and key2 share the prefix "key"
+	// 1 BranchNode the follow the first extention node
+	// 2 LeafNode, for key1 and key2
+
+	assert.Equal(t, 3, len(proof), "unexpected proof size: %d", len(proof))
 }
-
 func TestEthereumLikeData(t *testing.T) {
-	trie := NewTrie()
+	trie := NewMPT()
 
 	ethereumData := map[string]string{
 		"0x0000000000000000000000000000000000000001": "0x1000000000000000000000000000000000000000",
@@ -103,7 +119,7 @@ func TestEthereumLikeData(t *testing.T) {
 	}
 }
 func TestIntegration(t *testing.T) {
-	trie := NewTrie()
+	trie := NewMPT()
 
 	// Put a key-value pair
 	trie.Put([]byte("key1"), []byte("value1"))
@@ -133,7 +149,8 @@ func TestIntegration(t *testing.T) {
 	assert.True(t, exists)
 	assert.Equal(t, rootKey, storedRootKey)
 
-	// Test Proof (not implemented)
-	_, err = trie.Proof([]byte("key2"))
-	assert.Error(t, err)
+	// Test Proof
+	proof, err := trie.Proof([]byte("key2"))
+	assert.NoError(t, err)
+	assert.NotEmpty(t, proof)
 }

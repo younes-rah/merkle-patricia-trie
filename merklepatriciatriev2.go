@@ -22,6 +22,8 @@ type iTrie interface {
 	Proof(key []byte) ([][]byte, error)
 }
 
+var _ iTrie = (*MPT)(nil) // Ensures MPT implements iTrie
+
 type NodeType int
 
 const (
@@ -38,15 +40,15 @@ type Node struct {
 	Next     *Node
 }
 
-type Trie struct {
+type MPT struct {
 	root *Node
 }
 
-func NewTrie() *Trie {
-	return &Trie{}
+func NewMPT() *MPT {
+	return &MPT{}
 }
 
-func (t *Trie) Get(key []byte) ([]byte, error) {
+func (t *MPT) Get(key []byte) ([]byte, error) {
 	node := t.root
 	nibbles := keyToNibbles(key)
 
@@ -85,12 +87,12 @@ func keyToNibbles(key []byte) []byte {
 	return nibbles
 }
 
-func (t *Trie) Put(key []byte, value []byte) {
+func (t *MPT) Put(key []byte, value []byte) {
 	nibbles := keyToNibbles(key)
 	t.root = t.put(t.root, nibbles, value)
 }
 
-func (t *Trie) put(node *Node, nibbles []byte, value []byte) *Node {
+func (t *MPT) put(node *Node, nibbles []byte, value []byte) *Node {
 	if node == nil {
 		return &Node{Type: LeafNode, Key: nibbles, Value: value}
 	}
@@ -160,14 +162,14 @@ func commonPrefixLength(a, b []byte) int {
 	return minLen
 }
 
-func (t *Trie) Del(key []byte) error {
+func (t *MPT) Del(key []byte) error {
 	nibbles := keyToNibbles(key)
 	var err error
 	t.root, err = t.del(t.root, nibbles)
 	return err
 }
 
-func (t *Trie) del(node *Node, nibbles []byte) (*Node, error) {
+func (t *MPT) del(node *Node, nibbles []byte) (*Node, error) {
 	if node == nil {
 		return nil, errors.New("key not found")
 	}
@@ -206,7 +208,7 @@ func (t *Trie) del(node *Node, nibbles []byte) (*Node, error) {
 
 var storage = make(map[string][]byte)
 
-func (t *Trie) Commit() []byte {
+func (t *MPT) Commit() []byte {
 	if t.root == nil {
 		return nil
 	}
@@ -215,7 +217,7 @@ func (t *Trie) Commit() []byte {
 	return rootHash
 }
 
-func (t *Trie) hashNode(node *Node) []byte {
+func (t *MPT) hashNode(node *Node) []byte {
 	if node == nil {
 		return nil
 	}
@@ -247,7 +249,36 @@ func hashToSlice(hash [32]byte) []byte {
 	return hash[:]
 }
 
-func (t *Trie) Proof(key []byte) ([][]byte, error) {
-	// For simplicity, return an empty proof
-	return [][]byte{}, errors.New("proof not implemented")
+func (t *MPT) Proof(key []byte) ([][]byte, error) {
+	nibbles := keyToNibbles(key)
+	proof := [][]byte{}
+	node := t.root
+
+	for node != nil {
+		switch node.Type {
+		case BranchNode:
+			if len(nibbles) == 0 {
+				return proof, nil
+			}
+			proof = append(proof, t.hashNode(node))
+			node = node.Children[nibbles[0]]
+			nibbles = nibbles[1:]
+		case ExtensionNode:
+			prefix := node.Key
+			if !bytes.HasPrefix(nibbles, prefix) {
+				return nil, errors.New("key not found")
+			}
+			proof = append(proof, t.hashNode(node))
+			nibbles = nibbles[len(prefix):]
+			node = node.Next
+		case LeafNode:
+			if bytes.Equal(nibbles, node.Key) {
+				proof = append(proof, t.hashNode(node))
+				return proof, nil
+			}
+			return nil, errors.New("key not found")
+		}
+	}
+
+	return nil, errors.New("key not found")
 }
