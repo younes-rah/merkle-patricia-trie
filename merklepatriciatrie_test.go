@@ -13,6 +13,8 @@ func TestEmptyMptGet(t *testing.T) {
 	if got == nil {
 		t.Errorf("got %q want %q", got, want)
 	}
+
+	mpt.storage.Close()
 }
 
 func TestInsertedElementIsRetrivable(t *testing.T) {
@@ -27,6 +29,7 @@ func TestInsertedElementIsRetrivable(t *testing.T) {
 	if !bytes.Equal(got, want) {
 		t.Errorf("got %q want %q", got, want)
 	}
+	mpt.storage.Close()
 }
 
 func TestNonExistingKey(t *testing.T) {
@@ -39,6 +42,8 @@ func TestNonExistingKey(t *testing.T) {
 	if got == nil {
 		t.Errorf("got %q want %q", got, want)
 	}
+	mpt.storage.Close()
+
 }
 
 func TestDeletedElementShouldNotBeRetrivable(t *testing.T) {
@@ -65,6 +70,7 @@ func TestDeletedElementShouldNotBeRetrivable(t *testing.T) {
 	if err == nil {
 		t.Errorf("we should got an error when getting a deleted elements")
 	}
+	mpt.storage.Close()
 }
 
 func TestDeleteMultipleLevelsNode(t *testing.T) {
@@ -93,7 +99,7 @@ func TestDeleteMultipleLevelsNode(t *testing.T) {
 	if errKey3 == nil {
 		t.Errorf("we should got an error when getting a deleted elements")
 	}
-
+	mpt.storage.Close()
 }
 
 func TestCommit(t *testing.T) {
@@ -118,7 +124,7 @@ func TestProof(t *testing.T) {
 	if len(proof) == 0 {
 		t.Fatalf("expected a valid proof, got empty proof")
 	}
-
+	mpt.storage.Close()
 }
 func TestProofWithNonExistingKey(t *testing.T) {
 	mpt := NewMPT()
@@ -128,5 +134,5 @@ func TestProofWithNonExistingKey(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error for key2 proof, got none")
 	}
-
+	mpt.storage.Close()
 }

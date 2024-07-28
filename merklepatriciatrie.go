@@ -2,9 +2,12 @@ package merklepatriciatrie
 
 import (
 	"crypto/sha256"
-	"encoding/hex"
 	"errors"
+
+	"github.com/syndtr/goleveldb/leveldb"
 )
+
+const DB_FILE_NAME = "db"
 
 type iTrie interface {
 	// Get returns the value associate with the key
@@ -32,13 +35,20 @@ type Node struct {
 
 type MPT struct {
 	root    *Node
-	storage map[string][]byte
+	storage *leveldb.DB
 }
 
 func NewMPT() *MPT {
+	db, err := leveldb.OpenFile(DB_FILE_NAME, nil)
+
+	if err != nil {
+		panic("Unable to open database")
+	}
+	// defer db.Close()
+
 	return &MPT{
 		root:    &Node{children: make(map[byte]*Node)},
-		storage: make(map[string][]byte),
+		storage: db,
 	}
 }
 
@@ -160,7 +170,7 @@ func (t *MPT) commitNode(node *Node) []byte {
 
 	// Produce final hash
 	node.hash = nodeHash.Sum(nil)
-	t.storage[hex.EncodeToString(node.hash)] = node.value
+	t.storage.Put(node.hash, node.value, nil)
 
 	return node.hash
 
@@ -168,6 +178,7 @@ func (t *MPT) commitNode(node *Node) []byte {
 
 func (t *MPT) Commit() []byte {
 	t.commitNode(t.root)
+	t.storage.Close()
 	return t.root.hash
 }
 
