@@ -78,3 +78,53 @@ func (t *MPT) Put(key []byte, value []byte) {
 	currentNode.isLeaf = true
 
 }
+
+func (t *MPT) Del(key []byte) error {
+	// Buid a tree path "tracer"
+	pathTracer := []*Node{}
+
+	currentNode := t.root
+
+	for _, byteChar := range key {
+		// Check if the current key exists, if not return an error
+		if _, byteFound := currentNode.children[byteChar]; !byteFound {
+			return errors.New("key not found")
+		}
+		// save path
+		pathTracer = append(pathTracer, currentNode)
+		currentNode = currentNode.children[byteChar]
+	}
+
+	// Once we went through the tree, check that the last node is a leaf node
+	// Otherwise, we have an issue
+	if !currentNode.isLeaf {
+		return errors.New("key found but node is not a leaf")
+	}
+
+	// Deleting current node information
+	currentNode.value = nil
+	currentNode.isLeaf = false
+
+	// Deleting node and rebuild back the path using our path trace
+
+	for i := len(key) - 1; i >= 0; i-- {
+		// init current node and byte char
+		node := pathTracer[i]
+		char := key[i]
+
+		// ensure node is not a leaf and does not have children
+		// before deleting from map
+		// If that's the case we have finnished the deletion
+		if currentNode.isLeaf || len(currentNode.children) > 0 {
+			break
+		}
+		// The real delete is done
+		delete(node.children, char)
+		// Reassign the current node
+		currentNode = node
+	}
+
+	// finnish with no error
+	return nil
+
+}
