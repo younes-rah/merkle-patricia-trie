@@ -1,4 +1,4 @@
-package merklepatriciatriev2
+package merklepatriciatrie
 
 import (
 	"encoding/hex"

@@ -24,7 +24,6 @@ require (
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/golang/snappy v0.0.3 // indirect
 	github.com/stretchr/testify v1.9.0
-	github.com/syndtr/goleveldb v1.0.0
 	golang.org/x/net v0.27.0 // indirect
 	golang.org/x/sys v0.22.0 // indirect
 )
