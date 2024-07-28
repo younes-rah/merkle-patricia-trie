@@ -1,0 +1,50 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{amsmath}
+
+
+\title{Computational Cost Analysis of Block Processing}
+\date{}
+\begin{document}
+\maketitle
+
+Let:
+\begin{itemize}
+    \item ${n}$ : Number of state operations per block (each block h consumes a constant amount of gas) so n is constant.
+    \item ${L_h}$ : Average number of nodes accessed per state operation (intermediate + leaf node).
+\end{itemize}
+
+Per operation:
+\begin{itemize}
+    \item Reading time : ${T_r = L_r . R}$ $\rightarrow{}$${T_hoperation = L_h(R+N)}$
+    \item Writing time :  ${T_w = L_h . W}$ $\rightarrow{}$${T_h = n.T_hoperation = n.L_h(R+W)}$
+\end{itemize}
+
+More data means mode nodes accessed per operations with lead to:
+${L_h \approx k .\log_{16} (D_h)}$ (assuming MPT is balanced)
+
+${k}$: Constant that depends on trie implementation and keys distribution
+
+Which lead to:
+
+\centering\boxed{T_h = n.k.\log_{16}(D_h) . (R + W)}
+
+\begin{itemize}
+    \item The processing time for the block ${h}$: ${T_h = n.k.\log_{16}(D_h) + (R + W)}$
+
+    \item The processing time for the previous block 
+\end{itemize}
+
+${h}$: ${T_h = n.k.\log_{16}(D_h) . (R + W)}$
+
+$\Rightarrow \dfrac{T_h}{T_h-1} = \dfrac{n.k.\log_{16}(D_h) . (R + W)}{n.k.\log_{16}(D_h-1) . (R + W)}$
+
+$\Rightarrow \dfrac{T_h}{T_h-1} = \dfrac{\log_{16}(D_h) }{\log_{16}(D_h-1) }$
+
+$\Rightarrow {T_h} = \dfrac{\log_{16}(D_h) }{\log_{16}(D_h-1) }{.{T_h-1}}$
+
+
+
+
+
+\end{document}
