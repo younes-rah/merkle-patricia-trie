@@ -3,8 +3,9 @@ package merklepatriciatriev2
 import (
 	"bytes"
 	"crypto/sha256"
-	"encoding/hex"
 	"errors"
+
+	"github.com/dgraph-io/badger/v3"
 )
 
 type iTrie interface {
@@ -40,12 +41,93 @@ type Node struct {
 	Next     *Node
 }
 
-type MPT struct {
-	root *Node
+type Storage interface {
+	Put(key []byte, value []byte) error
+	Get(key []byte) ([]byte, error)
+	Delete(key []byte) error
+	Close() error
 }
 
-func NewMPT() *MPT {
-	return &MPT{}
+type InMemoryStorage struct {
+	data map[string][]byte
+}
+
+func NewInMemoryStorage() *InMemoryStorage {
+	return &InMemoryStorage{data: make(map[string][]byte)}
+}
+
+func (s *InMemoryStorage) Put(key []byte, value []byte) error {
+	s.data[string(key)] = value
+	return nil
+}
+
+func (s *InMemoryStorage) Get(key []byte) ([]byte, error) {
+	if value, ok := s.data[string(key)]; ok {
+		return value, nil
+	}
+	return nil, errors.New("key not found")
+}
+
+func (s *InMemoryStorage) Delete(key []byte) error {
+	delete(s.data, string(key))
+	return nil
+}
+
+func (s *InMemoryStorage) Close() error {
+	return nil
+}
+
+type BadgerStorage struct {
+	db *badger.DB
+}
+
+func NewBadgerStorage(dbPath string) (*BadgerStorage, error) {
+	opts := badger.DefaultOptions(dbPath)
+	// Disable logging for simplicity
+	opts.Logger = nil
+	db, err := badger.Open(opts)
+	if err != nil {
+		return nil, err
+	}
+	return &BadgerStorage{db: db}, nil
+}
+
+func (s *BadgerStorage) Put(key []byte, value []byte) error {
+	return s.db.Update(func(txn *badger.Txn) error {
+		return txn.Set(key, value)
+	})
+}
+
+func (s *BadgerStorage) Get(key []byte) ([]byte, error) {
+	var value []byte
+	err := s.db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get(key)
+		if err != nil {
+			return err
+		}
+		value, err = item.ValueCopy(nil)
+		return err
+	})
+	return value, err
+}
+
+func (s *BadgerStorage) Delete(key []byte) error {
+	return s.db.Update(func(txn *badger.Txn) error {
+		return txn.Delete(key)
+	})
+}
+
+func (s *BadgerStorage) Close() error {
+	return s.db.Close()
+}
+
+type MPT struct {
+	root    *Node
+	storage Storage
+}
+
+func NewMPT(storage Storage) *MPT {
+	return &MPT{storage: storage}
 }
 
 func (t *MPT) Get(key []byte) ([]byte, error) {
@@ -206,14 +288,13 @@ func (t *MPT) del(node *Node, nibbles []byte) (*Node, error) {
 	return node, nil
 }
 
-var storage = make(map[string][]byte)
-
 func (t *MPT) Commit() []byte {
 	if t.root == nil {
 		return nil
 	}
 	rootHash := t.hashNode(t.root)
-	storage[hex.EncodeToString(rootHash)] = rootHash
+	t.storage.Put(rootHash, rootHash)
+
 	return rootHash
 }
 

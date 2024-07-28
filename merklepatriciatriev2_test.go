@@ -4,11 +4,13 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/dgraph-io/badger/v3"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestPutAndGet(t *testing.T) {
-	trie := NewMPT()
+
+	trie := NewMPT(NewInMemoryStorage())
 
 	// Test Put and Get
 	trie.Put([]byte("key1"), []byte("value1"))
@@ -24,7 +26,7 @@ func TestPutAndGet(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	trie := NewMPT()
+	trie := NewMPT(NewInMemoryStorage())
 
 	// Put a key-value pair
 	trie.Put([]byte("key1"), []byte("value1"))
@@ -37,7 +39,7 @@ func TestDelete(t *testing.T) {
 }
 
 func TestCommit(t *testing.T) {
-	trie := NewMPT()
+	trie := NewMPT(NewInMemoryStorage())
 
 	// Put a key-value pair
 	trie.Put([]byte("key1"), []byte("value1"))
@@ -47,13 +49,13 @@ func TestCommit(t *testing.T) {
 	assert.NotNil(t, rootKey)
 
 	// Verify the trie is saved in persistent storage
-	storedRootKey, exists := storage[hex.EncodeToString(rootKey)]
-	assert.True(t, exists)
+	storedRootKey, err := trie.storage.Get(rootKey)
+	assert.Nil(t, err)
 	assert.Equal(t, rootKey, storedRootKey)
 }
 
 func TestProofSize(t *testing.T) {
-	trie := NewMPT()
+	trie := NewMPT(NewInMemoryStorage())
 
 	// Populate the trie with two key-value pairs
 	keys := []string{"key1", "key2"}
@@ -77,7 +79,7 @@ func TestProofSize(t *testing.T) {
 	assert.Equal(t, 3, len(proof), "unexpected proof size: %d", len(proof))
 }
 func TestEthereumLikeData(t *testing.T) {
-	trie := NewMPT()
+	trie := NewMPT(NewInMemoryStorage())
 
 	ethereumData := map[string]string{
 		"0x0000000000000000000000000000000000000001": "0x1000000000000000000000000000000000000000",
@@ -118,8 +120,8 @@ func TestEthereumLikeData(t *testing.T) {
 		assert.Equal(t, valueBytes, retrievedValue)
 	}
 }
-func TestIntegration(t *testing.T) {
-	trie := NewMPT()
+func TestIntegrationInMemory(t *testing.T) {
+	trie := NewMPT(NewInMemoryStorage())
 
 	// Put a key-value pair
 	trie.Put([]byte("key1"), []byte("value1"))
@@ -145,12 +147,59 @@ func TestIntegration(t *testing.T) {
 	assert.NotNil(t, rootKey)
 
 	// Verify the trie is saved in persistent storage
-	storedRootKey, exists := storage[hex.EncodeToString(rootKey)]
-	assert.True(t, exists)
+	storedRootKey, err := trie.storage.Get(rootKey)
+	assert.Nil(t, err)
 	assert.Equal(t, rootKey, storedRootKey)
 
 	// Test Proof
 	proof, err := trie.Proof([]byte("key2"))
 	assert.NoError(t, err)
 	assert.NotEmpty(t, proof)
+}
+
+func TestIntegrationBadgerDb(t *testing.T) {
+	// Open a BadgerDB instance for testing
+	dbPath := "test.db"
+	opts := badger.DefaultOptions(dbPath)
+	opts.Logger = nil // Disable logging for simplicity
+	db, err := badger.Open(opts)
+	assert.NoError(t, err)
+	defer db.Close()
+
+	// Create a BadgerStorage instance
+	storage := &BadgerStorage{db: db}
+
+	// Create a new MPT instance with BadgerStorage
+	trie := NewMPT(storage)
+
+	// Test data
+	keys := []string{"key1", "key2", "key3"}
+	values := []string{"value1", "value2", "value3"}
+
+	// Test Put and Get methods
+	for i := range keys {
+		trie.Put([]byte(keys[i]), []byte(values[i]))
+		value, err := trie.Get([]byte(keys[i]))
+		assert.NoError(t, err)
+		assert.Equal(t, values[i], string(value))
+	}
+
+	// Test Commit method
+	rootHash := trie.Commit()
+	assert.NotNil(t, rootHash)
+
+	// Test Proof method
+	for i := range keys {
+		proof, err := trie.Proof([]byte(keys[i]))
+		assert.NoError(t, err)
+		assert.NotEmpty(t, proof)
+
+	}
+
+	for i := range keys {
+		err := trie.Del([]byte(keys[i]))
+		assert.NoError(t, err)
+		_, err = trie.Get([]byte(keys[i]))
+		assert.Error(t, err)
+	}
 }
