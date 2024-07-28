@@ -168,3 +168,27 @@ func (t *MPT) Commit() []byte {
 	t.commitNode(t.root)
 	return t.root.hash
 }
+
+func (t *MPT) Proof(key []byte) ([][]byte, error) {
+	currentNode := t.root
+
+	proof := [][]byte{}
+
+	for _, byteChar := range key {
+		// Check if the key exists, if not return an error
+		if _, byteCharFound := currentNode.children[byteChar]; !byteCharFound {
+			return nil, errors.New("key not found")
+		}
+		proof = append(proof, currentNode.hash)
+		currentNode = currentNode.children[byteChar]
+	}
+
+	// Ensure last element is a leaf node
+	if currentNode.isLeaf {
+		return proof, nil
+	}
+
+	// if that is not the case then we certainly have an issue in the structure
+	return nil, errors.New("key found but node is not a leaf")
+
+}

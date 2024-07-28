@@ -105,3 +105,28 @@ func TestCommit(t *testing.T) {
 		t.Fatalf("expected a valid root hash, got empty hash")
 	}
 }
+
+func TestProof(t *testing.T) {
+	mpt := NewMPT()
+	mpt.Put([]byte("key1"), []byte("value1"))
+	mpt.Commit()
+	proof, err := mpt.Proof([]byte("key1"))
+	if err != nil {
+		t.Fatalf("expected proof for key1, got error: %v", err)
+	}
+
+	if len(proof) == 0 {
+		t.Fatalf("expected a valid proof, got empty proof")
+	}
+
+}
+func TestProofWithNonExistingKey(t *testing.T) {
+	mpt := NewMPT()
+	mpt.Put([]byte("key1"), []byte("value1"))
+	mpt.Commit()
+	_, err := mpt.Proof([]byte("key2"))
+	if err == nil {
+		t.Fatalf("expected error for key2 proof, got none")
+	}
+
+}
