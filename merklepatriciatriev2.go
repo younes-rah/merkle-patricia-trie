@@ -23,7 +23,8 @@ type iTrie interface {
 	Proof(key []byte) ([][]byte, error)
 }
 
-var _ iTrie = (*MPT)(nil) // Ensures MPT implements iTrie
+// Ensures MPT implements iTrie
+var _ iTrie = (*MPT)(nil)
 
 type NodeType int
 

@@ -158,10 +158,10 @@ func TestIntegrationInMemory(t *testing.T) {
 }
 
 func TestIntegrationBadgerDb(t *testing.T) {
-	// Open a BadgerDB instance for testing
 	dbPath := "test.db"
 	opts := badger.DefaultOptions(dbPath)
-	opts.Logger = nil // Disable logging for simplicity
+	// Disable logging for simplicity
+	opts.Logger = nil
 	db, err := badger.Open(opts)
 	assert.NoError(t, err)
 	defer db.Close()
