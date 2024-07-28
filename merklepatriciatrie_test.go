@@ -28,3 +28,15 @@ func TestInsertedElementIsRetrivable(t *testing.T) {
 		t.Errorf("got %q want %q", got, want)
 	}
 }
+
+func TestNonExistingKey(t *testing.T) {
+	mpt := NewMPT()
+
+	mpt.Put([]byte("key1"), []byte("value1"))
+	_, got := mpt.Get([]byte("key2"))
+	want := "key not found"
+
+	if got == nil {
+		t.Errorf("got %q want %q", got, want)
+	}
+}
