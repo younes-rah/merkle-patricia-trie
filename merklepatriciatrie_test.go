@@ -2,6 +2,7 @@ package merklepatriciatrie
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"testing"
 
 	"github.com/dgraph-io/badger/v3"
@@ -200,4 +201,69 @@ func TestIntegrationBadgerDb(t *testing.T) {
 		_, err = trie.Get([]byte(keys[i]))
 		assert.Error(t, err)
 	}
+}
+
+func TestNodeSerialization(t *testing.T) {
+	// Create a sample node
+	node := &Node{
+		Type:  BranchNode,
+		Value: []byte("example"),
+		Children: [16]*Node{
+			{Type: LeafNode, Key: []byte{0x01}, Value: []byte("child1")},
+			{Type: LeafNode, Key: []byte{0x02}, Value: []byte("child2")},
+		},
+		Key:  []byte{0x00},
+		Next: nil,
+	}
+
+	// Serialize the node to JSON
+	jsonData, err := json.Marshal(node)
+	if err != nil {
+		t.Fatalf("Failed to serialize node to JSON: %v", err)
+	}
+
+	// Deserialize the JSON back to a node
+	deserializedNode := &Node{}
+	err = json.Unmarshal(jsonData, deserializedNode)
+	if err != nil {
+		t.Fatalf("Failed to deserialize JSON to node: %v", err)
+	}
+
+	// Compare the original node with the deserialized node
+	if !nodesEqual(node, deserializedNode) {
+		t.Errorf("Deserialized node does not match the original node")
+	}
+}
+
+func nodesEqual(a, b *Node) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	if a.Type != b.Type {
+		return false
+	}
+	if !bytesEqual(a.Value, b.Value) {
+		return false
+	}
+	if !bytesEqual(a.Key, b.Key) {
+		return false
+	}
+	for i := range a.Children {
+		if !nodesEqual(a.Children[i], b.Children[i]) {
+			return false
+		}
+	}
+	return nodesEqual(a.Next, b.Next)
+}
+
+func bytesEqual(a, b []byte) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
