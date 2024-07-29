@@ -29,3 +29,7 @@ To run the tests
 # Computational Cost Analysis of Block Processing
 
 See document `computation_cost_analysis_of_block_processing.pdf`
+
+# Appendix
+
+![Merkel Patricia Trie](https://i.sstatic.net/YZGxe.png)
